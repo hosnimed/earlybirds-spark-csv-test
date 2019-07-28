@@ -2,7 +2,8 @@ package com.github.hosnimed.spark
 
 import com.github.hosnimed.spark.Domain.{Input, schema}
 import junit.framework.Assert
-import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.functions.{lit, max, sum, udf}
+import org.apache.spark.sql.types.FloatType
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SaveMode}
 
 object App extends App with SparkSessionWrapper {
@@ -83,4 +84,56 @@ object App extends App with SparkSessionWrapper {
     productsDF.unpersist
     productsDF
   }
+
+  /**
+   * Compute Rating Aggregation
+   */
+  // compute max timestamp
+  def computeMaxTimestamp(ds: Dataset[Input]) = {
+    ds.agg(max($"timestamp")).head.getLong(0)
+  }
+  val maxTS = computeMaxTimestamp(inputDS)
+
+  // one day
+  val day = 1000 * 3600 * 24
+  // function for computing rating penalty
+  def computeRatingPenalty(rating: Float, timestamp: Long, maxTimestamp: Long): Float = (rating * Math.pow(0.95, Math.floor((maxTimestamp - timestamp) / day))).toFloat
+  // udf for computing rating penalty
+  val computeRatingPenaltyUDF = udf(computeRatingPenalty _, FloatType)
+  // add rating penalty column
+  val ratingPenaltyDF = applyComputeRatingPenaltyUDF(inputDS, maxTS)
+  def applyComputeRatingPenaltyUDF(ds: Dataset[Input], maxTimestamp: Long) = {
+    ds.withColumn("ratingPenalty", computeRatingPenaltyUDF($"rating", $"timestamp", lit(maxTimestamp)))
+  }
+  inputDS.unpersist
+  ratingPenaltyDF.cache
+
+  // sum rating and filter those greater than 0.01
+  val sumRatingDF = aggregateSumFilter(ratingPenaltyDF)
+  ratingPenaltyDF.unpersist
+  sumRatingDF.cache
+  def aggregateSumFilter(df: DataFrame): DataFrame = {
+    df.groupBy($"userId", $"itemId").agg(sum($"ratingPenalty")).withColumnRenamed("sum(ratingPenalty)", "ratingPenalty").filter($"ratingPenalty" > 0.01)
+  }
+
+  // join with usersDf and productsDf keeping sumRating
+  val agg_rating: DataFrame = sumRatingDF
+    .join(usersDF, usersDF("userId") === sumRatingDF("userId"), "inner")
+    .join(productsDF, productsDF("itemId") === sumRatingDF("itemId"), "inner")
+    .select($"userIdAsInteger", $"itemIdAsInteger", $"ratingPenalty")
+//    .limit(10000)
+
+  sumRatingDF.unpersist
+  agg_rating.cache
+  agg_rating.printSchema
+  agg_rating.show
+
+  //save agg_rating to output folder
+  agg_rating
+    //    .coalesce(agg_rating.rdd.partitions.size)
+    .write
+    .mode(SaveMode.Overwrite)
+    .csv(path + "agg_ratings")
+  agg_rating.unpersist
+
 }

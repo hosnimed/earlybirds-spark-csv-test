@@ -16,7 +16,7 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 
 // test suite settings
 fork in Test := true
-javaOptions ++= Seq("-Xms1024M", "-Xmx4096M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled")
+javaOptions ++= Seq("-Xms1024M", "-Xmx4096M", "-XX:MaxPermSize=4096M", "-XX:+CMSClassUnloadingEnabled")
 // Show runtime of tests
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 

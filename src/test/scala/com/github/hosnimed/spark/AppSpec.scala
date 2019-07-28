@@ -5,6 +5,8 @@ import com.github.mrpowers.spark.fast.tests.{DataFrameComparer, DatasetComparerL
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.scalatest.FunSpec
 
+import scala.collection.JavaConversions._
+
 class AppSpec
   extends FunSpec
     with SparkSessionTestWrapper
@@ -64,5 +66,26 @@ class AppSpec
     }
   }
 
+  describe("compute aggregate rating") {
+
+    it("compute max timestamp") {
+      val maxts = App.computeMaxTimestamp(actualDS)
+      maxts === ts + 6000
+    }
+
+    it("apply rating penalty udf") {
+      val df = App.applyComputeRatingPenaltyUDF(actualDS, ts + 6000)
+      val rows = df.select($"ratingPenalty").collectAsList()
+      rows.size() === 7
+    }
+
+    it("compute aggregate rating") {
+      // just rename the actual rating
+      val rpDS = actualDS.withColumnRenamed("rating", "ratingPenalty")
+      val df = App.aggregateSumFilter(rpDS)
+      val sum = rpDS.select("ratingPenalty").collectAsList().map(r => r.getFloat(0)).sum
+      sum === (1.0f + 2 * 1.1f + 2 * 1.2f + 2 * 1.3f)
+    }
+  }
 
 }
