@@ -2,7 +2,7 @@ package com.github.hosnimed.spark
 
 import com.github.hosnimed.spark.Domain.Input
 import com.github.mrpowers.spark.fast.tests.{DataFrameComparer, DatasetComparerLike}
-import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.scalatest.FunSpec
 
 class AppSpec
@@ -31,6 +31,36 @@ class AppSpec
     it("load csv input and convert to ds") {
       val inputDS: Dataset[Input] = App.loadInputDS(input)
       DatasetComparerLike.naiveEquality(inputDS, actualDS)
+    }
+
+    it("lookup for users") {
+      val actualUsersDF: DataFrame = Seq(
+        ("1000", 0),
+        ("1000", 1),
+        ("1001", 2),
+        ("1001", 3),
+        ("1002", 4),
+        ("1002", 5),
+        ("1003", 6)
+      ).toDF("userId", "userIdAsInteger")
+
+      val usersDF = App.lookupUsers(actualDS)
+      DatasetComparerLike.naiveEquality(usersDF, actualUsersDF)
+    }
+
+    it("lookup for products") {
+      val actualProductsDF: DataFrame = Seq(
+        ("99", 0),
+        ("98", 1),
+        ("98", 2),
+        ("97", 3),
+        ("98", 4),
+        ("98", 5),
+        ("98", 6)
+      ).toDF("itemId", "itemIdAsInteger")
+
+      val productDF = App.lookupProducts(actualDS)
+      DatasetComparerLike.naiveEquality(productDF, actualProductsDF)
     }
   }
 
