@@ -1,50 +1,38 @@
 package com.github.hosnimed.spark
 
+import com.github.hosnimed.spark.Domain.Input
+import com.github.mrpowers.spark.fast.tests.{DataFrameComparer, DatasetComparerLike}
+import org.apache.spark.sql.Dataset
 import org.scalatest.FunSpec
-import org.apache.spark.sql.functions._
-import com.github.mrpowers.spark.fast.tests.DataFrameComparer
-import org.apache.spark.sql.types.{StructField, StructType, StringType}
-import org.apache.spark.sql.Row
 
 class AppSpec
-    extends FunSpec
+  extends FunSpec
     with SparkSessionTestWrapper
     with DataFrameComparer {
 
   import spark.implicits._
 
-  describe(".happyData") {
+  val input = "src/test/resources/input/input.csv"
+  val output = "src/test/resources/output/"
+  val ts: Long = "1564280647844".toLong
 
-    it("appends a happy column to a DataFrame") {
+  val actualDS: Dataset[Input] = Seq(
+    Input("1000", "99", 1.0f, ts),
+    Input("1000", "98", 1.1f, ts + 1000),
+    Input("1001", "98", 1.2f, ts + 2000),
+    Input("1001", "97", 1.3f, ts + 3000),
+    Input("1002", "98", 1.3f, ts + 4000),
+    Input("1002", "98", 1.2f, ts + 5000),
+    Input("1003", "98", 1.1f, ts + 6000)
+  ).toDS
 
-      val sourceDF = Seq(
-        ("jose"),
-        ("li"),
-        ("luisa")
-      ).toDF("name")
+  describe("initialize input ds") {
 
-      val actualDF = sourceDF.transform(App.happyData())
-
-      val expectedData = List(
-        Row("jose", "data is fun"),
-        Row("li", "data is fun"),
-        Row("luisa", "data is fun")
-      )
-
-      val expectedSchema = List(
-        StructField("name", StringType, true),
-        StructField("happy", StringType, false)
-      )
-
-      val expectedDF = spark.createDataFrame(
-        spark.sparkContext.parallelize(expectedData),
-        StructType(expectedSchema)
-      )
-
-      assertSmallDataFrameEquality(actualDF, expectedDF)
-
+    it("load csv input and convert to ds") {
+      val inputDS: Dataset[Input] = App.loadInputDS(input)
+      DatasetComparerLike.naiveEquality(inputDS, actualDS)
     }
-
   }
+
 
 }
