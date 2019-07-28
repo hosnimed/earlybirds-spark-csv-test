@@ -1,0 +1,27 @@
+target/
+lib_managed/
+src_managed/
+project/boot/
+
+.idea
+.idea/
+*.ipr
+*.iws
+*.iml
+out/
+
+# Java ignores
+*.class
+hs_err_pid*
+
+*.swp
+
+.DS_Store
+
+/tmp
+src/main/resources/
+*.csv
+
+/metastore_db/
+derby.log
+
