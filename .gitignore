@@ -24,4 +24,19 @@ src/main/resources/
 
 /metastore_db/
 derby.log
+target/
+lib_managed/
+src_managed/
+project/boot/
 
+.idea
+*.iml
+
+*.swp
+
+.DS_Store
+
+/tmp
+
+/metastore_db/
+derby.log
